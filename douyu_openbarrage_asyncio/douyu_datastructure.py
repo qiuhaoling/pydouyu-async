@@ -25,7 +25,6 @@ def serialize(data):
     kv_pairs.append('')
 
     result = "/".join(kv_pairs)
-    # print '[Serializer] Result: %s' % result
     return result
 
 
@@ -43,21 +42,19 @@ def deserialize(raw):
 
         kv = kv_pair.split("@=")
         if len(kv) != 2:
-            # print '[Deserialize] Invalid KV_PAIR: %s' % kv_pair
             continue
 
         k = unescape(kv[0])
         v = unescape(kv[1])
         if not k:
-            # print '[Deserialize] Invalid KV_PAIR after unescaping: %s' % kv_pair
             continue
         if not v:
             v = ''
 
         # Nested deserialize
         try:
-            if v.index('@=') >= 0:
-                v = deserialize(v)
+            if v.index('@A=') >= 0:
+                v = deserialize(unescape(v))
         except ValueError as e:
             pass
 
