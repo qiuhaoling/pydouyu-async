@@ -50,7 +50,7 @@ class DouyuClient():
                     except Exception as inst:
                         if self.inner_loop_exception_event_handler is not None:
                             await self.inner_loop_exception_event_handler(inst)
-            except:
+            except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
                 await self.handshake()
