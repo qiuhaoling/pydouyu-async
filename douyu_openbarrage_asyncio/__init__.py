@@ -12,35 +12,47 @@ class DouyuClient():
         self = cls()
         self.roomid = roomid
         self.event_handler = event_handler
-        self.reader,self.writer = await asyncio.open_connection('openbarrage.douyutv.com',8601)
-        await self.handshake(roomid)
+        await self.handshake()
         future.set_result(self)
 
     async def heartbeat(self,duration=30):
         while True:
-            msg = douyu_datastructure.serialize({'type': 'keepalive', 'tick':int(time.time())})
-            self.writer.write(douyu_packet.to_raw(msg))
-            await self.writer.drain()
-            await asyncio.sleep(duration)
-    async def handshake(self,roomid):
+            try:
+                msg = douyu_datastructure.serialize({'type': 'keepalive', 'tick':int(time.time())})
+                self.writer.write(douyu_packet.to_raw(msg))
+                await self.writer.drain()
+                await asyncio.sleep(duration)
+            except:
+                import traceback
+                traceback.print_exc()
+                await self.handshake()
+
+    async def handshake(self):
+        self.reader, self.writer = await asyncio.open_connection('openbarrage.douyutv.com', 8601)
         msg = douyu_datastructure.serialize({'type': 'loginreq', 'roomid':self.roomid})
         self.writer.write(douyu_packet.to_raw(msg))
         await self.writer.drain()
-        content, remains = douyu_packet.from_raw(await self.reader.read(9999), None)
+        # content, remains = douyu_packet.from_raw(await self.reader.read(9999), None)
         msg = douyu_datastructure.serialize({'type': 'joingroup', 'rid':self.roomid, 'gid':-9999})
         self.writer.write(douyu_packet.to_raw(msg))
         await self.writer.drain()
+
     async def mainloop(self):
         remains = None
         while True:
-            content,remains = douyu_packet.from_raw(await self.reader.read(9999), remains)
-            for item in content:
-                try:
-                    msg = douyu_datastructure.deserialize(item.decode('utf-8'))
-                    await self.event_handler(msg)
-                except Exception as inst:
-                    import traceback
-                    traceback.print_exc()
+            try:
+                content,remains = douyu_packet.from_raw(await self.reader.read(9999), remains)
+                for item in content:
+                    try:
+                        msg = douyu_datastructure.deserialize(item.decode('utf-8'))
+                        await self.event_handler(msg)
+                    except Exception as inst:
+                        import traceback
+                        traceback.print_exc()
+            except:
+                import traceback
+                traceback.print_exc()
+                await self.handshake()
 
     async def main(self):
         asyncio.ensure_future(self.mainloop())
