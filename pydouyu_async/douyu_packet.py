@@ -27,18 +27,14 @@ def from_raw(buff,remains= None):
             return parsed_buff, buff
         packet_length_1, packet_length_2, msg_type, encryption, reserved, body = unpack('<llhbb%ds' % (buff_len - 12), buff)
         if packet_length_1 != packet_length_2:
-            # raise Exception('[Packet] Unmatched packet length fields!')
-            print('[Packet] Unmatched packet length fields!')
             return parsed_buff,None
         needed_body_length = packet_length_1 - 8
         current_body_length = len(body)
         if current_body_length < needed_body_length:
             return parsed_buff,buff
         elif current_body_length > needed_body_length:
-            # return body[0:needed_body_length],body[needed_body_length:]
             parsed_buff.append(body[0:needed_body_length])
             buff = buff[12 + needed_body_length:]
         else:
             parsed_buff.append(body[0:needed_body_length])
             return parsed_buff,None
-        # print '[Packet] Packet body trimmed: %s' % body

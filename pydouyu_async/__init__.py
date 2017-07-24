@@ -1,8 +1,8 @@
 import asyncio
 import time
 
-from douyu_openbarrage_asyncio import douyu_packet
-from douyu_openbarrage_asyncio import douyu_datastructure
+from . import douyu_packet
+from . import douyu_datastructure
 
 BUF_SIZE=8192
 
