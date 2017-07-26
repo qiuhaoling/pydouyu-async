@@ -5,6 +5,8 @@ from . import douyu_packet
 from . import douyu_datastructure
 
 BUF_SIZE=8192
+DOUYU_HOST='openbarrage.douyutv.com'
+DOUYU_PORT=8601
 
 class DouyuClient():
     @classmethod
@@ -35,7 +37,12 @@ class DouyuClient():
                 await self.handshake()
 
     async def handshake(self):
-        self.reader, self.writer = await asyncio.open_connection('openbarrage.douyutv.com', 8601)
+        try:
+            self.reader.close()
+            self.writer.close()
+        except:
+            pass
+        self.reader, self.writer = await asyncio.open_connection(DOUYU_HOST, DOUYU_PORT)
         msg = douyu_datastructure.serialize({'type': 'loginreq', 'roomid':self.roomid})
         self.writer.write(douyu_packet.to_raw(msg))
         await self.writer.drain()
