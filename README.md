@@ -8,7 +8,7 @@ The only dependency is Python 3.5.
 # basic usage
 ```
 import asyncio
-from douyu_openbarrage_asyncio import DouyuFactorty
+from pydouyu_async import DouyuFactorty
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
