@@ -39,6 +39,9 @@ class DouyuClient():
     async def handshake(self):
         try:
             self.reader.close()
+        except:
+            pass
+        try:
             self.writer.close()
         except:
             pass
