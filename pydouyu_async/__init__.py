@@ -15,14 +15,18 @@ class DouyuClient():
         self.inner_loop_exception_event_handler = inner_loop_exception_event_handler
         self.outter_loop_exception_event_handler = outter_loop_exception_event_handler
         await self.handshake()
+        self.message_in_past_duration = True
         future.set_result(self)
 
     async def heartbeat(self,duration=30):
         while True:
             try:
+                if self.message_in_past_duration is False:
+                    raise Exception("No message received in the past {} seconds, reconnecting")
                 msg = douyu_datastructure.serialize({'type': 'keepalive', 'tick':int(time.time())})
                 self.writer.write(douyu_packet.to_raw(msg))
                 await self.writer.drain()
+                self.message_in_past_duration = False
                 await asyncio.sleep(duration)
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
@@ -44,6 +48,7 @@ class DouyuClient():
             try:
                 content,remains = douyu_packet.from_raw(await self.reader.read(BUF_SIZE), remains)
                 for item in content:
+                    self.message_in_past_duration = True
                     try:
                         msg = douyu_datastructure.deserialize(item.decode('utf-8'))
                         await self.on_message_event_handler(msg)
