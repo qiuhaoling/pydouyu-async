@@ -5,7 +5,7 @@ from . import douyu_packet
 from . import douyu_datastructure
 
 BUF_SIZE=8192
-DOUYU_HOST='123.150.206.162'
+DOUYU_HOST='openbarrage.douyutv.com'
 DOUYU_PORT=8601
 
 class DouyuClient():
