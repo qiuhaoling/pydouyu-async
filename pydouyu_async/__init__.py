@@ -36,8 +36,7 @@ class DouyuClient():
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
                 self.message_in_past_duration = True
-                asyncio.ensure_future(self.handshake())
-                break
+                await self.handshake()
 
     async def handshake(self):
         with await self.io_lock:
@@ -74,8 +73,8 @@ class DouyuClient():
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
-                asyncio.ensure_future(self.handshake())
-                break
+                self.message_in_past_duration = True
+                await self.handshake()
 
     async def main(self):
         asyncio.ensure_future(self.mainloop())
