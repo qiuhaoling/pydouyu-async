@@ -62,12 +62,14 @@ class DouyuClient():
         while True:
             try:
                 with await self.io_lock:
-                    content,remains = douyu_packet.from_raw(await self.reader.read(BUF_SIZE), remains)
+                    content,remains = douyu_packet.from_raw(await asyncio.wait_for(self.reader.read(BUF_SIZE),timeout), remains)
                 for item in content:
                     self.message_in_past_duration += 1
                     try:
                         msg = douyu_datastructure.deserialize(item.decode('utf-8'))
                         await self.on_message_event_handler(msg)
+                    except asyncio.TimeoutError:
+                        pass
                     except Exception as inst:
                         if self.inner_loop_exception_event_handler is not None:
                             await self.inner_loop_exception_event_handler(inst)
