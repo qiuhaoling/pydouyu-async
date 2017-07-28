@@ -4,7 +4,7 @@ import time
 from . import douyu_packet
 from . import douyu_datastructure
 
-BUF_SIZE=8192
+BUF_SIZE=2048
 DOUYU_HOST='openbarrage.douyutv.com'
 DOUYU_PORT=8601
 timeout = 10
@@ -71,6 +71,8 @@ class DouyuClient():
                     except Exception as inst:
                         if self.inner_loop_exception_event_handler is not None:
                             await self.inner_loop_exception_event_handler(inst)
+            except asyncio.TimeoutError:
+                pass
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
