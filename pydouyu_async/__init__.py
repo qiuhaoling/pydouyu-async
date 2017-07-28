@@ -1,8 +1,8 @@
 import asyncio
 import time
 
-from . import douyu_packet
 from . import douyu_datastructure
+from . import douyu_packet
 
 BUF_SIZE=8192
 DOUYU_HOST='openbarrage.douyutv.com'
