@@ -16,7 +16,7 @@ class DouyuClient():
         self.inner_loop_exception_event_handler = inner_loop_exception_event_handler
         self.outter_loop_exception_event_handler = outter_loop_exception_event_handler
         loop = asyncio.get_event_loop()
-        self.message_in_past_duration = True
+        self.message_in_past_duration = 1
         self.io_lock = asyncio.Lock()
         loop.run_until_complete(self.handshake())
         asyncio.ensure_future(self.main())
@@ -25,21 +25,21 @@ class DouyuClient():
     async def heartbeat(self,duration=30):
         while True:
             try:
-                if not self.message_in_past_duration:
+                if self.message_in_past_duration < 1:
                     raise Exception("[{}]No message received in the past {} seconds, reconnecting...".format(self.roomid,duration))
                 msg = douyu_datastructure.serialize({'type': 'keepalive', 'tick':int(time.time())})
                 with await self.io_lock:
                     self.writer.write(douyu_packet.to_raw(msg))
-                    await asyncio.wait_for(self.writer.drain(),timeout)
-                self.message_in_past_duration = False
+                    await self.writer.drain()
+                self.message_in_past_duration = 0
                 await asyncio.sleep(duration)
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
-                self.message_in_past_duration = True
                 await self.handshake()
 
     async def handshake(self):
+        self.message_in_past_duration = 1
         with await self.io_lock:
             try:
                 self.reader.close()
@@ -49,34 +49,31 @@ class DouyuClient():
                 self.writer.close()
             except:
                 pass
-            self.reader, self.writer = await asyncio.wait_for(asyncio.open_connection(DOUYU_HOST, DOUYU_PORT),timeout)
+            self.reader, self.writer = await asyncio.open_connection(DOUYU_HOST, DOUYU_PORT)
             msg = douyu_datastructure.serialize({'type': 'loginreq', 'roomid':self.roomid})
             self.writer.write(douyu_packet.to_raw(msg))
-            await asyncio.wait_for(self.writer.drain(), timeout)
+            await self.writer.drain()
             msg = douyu_datastructure.serialize({'type': 'joingroup', 'rid':self.roomid, 'gid':-9999})
             self.writer.write(douyu_packet.to_raw(msg))
-            await asyncio.wait_for(self.writer.drain(), timeout)
+            await self.writer.drain()
 
     async def mainloop(self):
         remains = None
         while True:
             try:
                 with await self.io_lock:
-                    content,remains = douyu_packet.from_raw(await asyncio.wait_for(self.reader.read(BUF_SIZE),timeout), remains)
+                    content,remains = douyu_packet.from_raw(await self.reader.read(BUF_SIZE), remains)
                 for item in content:
-                    self.message_in_past_duration = True
+                    self.message_in_past_duration += 1
                     try:
                         msg = douyu_datastructure.deserialize(item.decode('utf-8'))
                         await self.on_message_event_handler(msg)
                     except Exception as inst:
                         if self.inner_loop_exception_event_handler is not None:
                             await self.inner_loop_exception_event_handler(inst)
-            except asyncio.TimeoutError:
-                pass
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
-                self.message_in_past_duration = True
                 await self.handshake()
 
     async def main(self):
