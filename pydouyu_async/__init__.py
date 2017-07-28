@@ -74,7 +74,6 @@ class DouyuClient():
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
-                await self.handshake()
 
     async def main(self):
         asyncio.ensure_future(self.mainloop())
