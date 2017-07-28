@@ -4,19 +4,20 @@ import time
 from . import douyu_packet
 from . import douyu_datastructure
 
-BUF_SIZE=2048
+BUF_SIZE=8192
 DOUYU_HOST='openbarrage.douyutv.com'
 DOUYU_PORT=8601
-timeout = 10
 
 class DouyuClient():
     def __init__(self,roomid,on_message_event_handler,inner_loop_exception_event_handler=None,outter_loop_exception_event_handler=None):
+        super().__init__()
         self.roomid = roomid
         self.on_message_event_handler = on_message_event_handler
         self.inner_loop_exception_event_handler = inner_loop_exception_event_handler
         self.outter_loop_exception_event_handler = outter_loop_exception_event_handler
         loop = asyncio.get_event_loop()
         self.message_in_past_duration = 1
+        self.message_in_past_duration_lock = asyncio.Lock()
         self.io_lock = asyncio.Lock()
         loop.run_until_complete(self.handshake())
         asyncio.ensure_future(self.main())
@@ -31,7 +32,8 @@ class DouyuClient():
                 with await self.io_lock:
                     self.writer.write(douyu_packet.to_raw(msg))
                     await self.writer.drain()
-                self.message_in_past_duration = 0
+                with await self.message_in_past_duration_lock:
+                    self.message_in_past_duration = 0
                 await asyncio.sleep(duration)
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
@@ -39,7 +41,8 @@ class DouyuClient():
                 await self.handshake()
 
     async def handshake(self):
-        self.message_in_past_duration = 1
+        with await self.message_in_past_duration_lock:
+            self.message_in_past_duration = 1
         with await self.io_lock:
             try:
                 self.reader.close()
@@ -61,15 +64,16 @@ class DouyuClient():
         remains = None
         while True:
             try:
+                if self.reader.at_eof():
+                    await self.handshake()
                 with await self.io_lock:
-                    content,remains = douyu_packet.from_raw(await asyncio.wait_for(self.reader.read(BUF_SIZE),timeout), remains)
+                    content,remains = douyu_packet.from_raw(await self.reader.read(BUF_SIZE), remains)
                 for item in content:
-                    self.message_in_past_duration += 1
+                    with await self.message_in_past_duration_lock:
+                        self.message_in_past_duration += 1
                     try:
                         msg = douyu_datastructure.deserialize(item.decode('utf-8'))
                         await self.on_message_event_handler(msg)
-                    except asyncio.TimeoutError:
-                        pass
                     except Exception as inst:
                         if self.inner_loop_exception_event_handler is not None:
                             await self.inner_loop_exception_event_handler(inst)
