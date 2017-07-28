@@ -7,6 +7,7 @@ from . import douyu_datastructure
 BUF_SIZE=8192
 DOUYU_HOST='openbarrage.douyutv.com'
 DOUYU_PORT=8601
+timeout = 10
 
 class DouyuClient():
     def __init__(self,roomid,on_message_event_handler,inner_loop_exception_event_handler=None,outter_loop_exception_event_handler=None):
@@ -29,7 +30,7 @@ class DouyuClient():
                 msg = douyu_datastructure.serialize({'type': 'keepalive', 'tick':int(time.time())})
                 with await self.io_lock:
                     self.writer.write(douyu_packet.to_raw(msg))
-                    await self.writer.drain()
+                    await asyncio.wait_for(self.writer.drain(),timeout)
                 self.message_in_past_duration = False
                 await asyncio.sleep(duration)
             except Exception as inst:
@@ -48,20 +49,20 @@ class DouyuClient():
                 self.writer.close()
             except:
                 pass
-            self.reader, self.writer = await asyncio.open_connection(DOUYU_HOST, DOUYU_PORT)
+            self.reader, self.writer = await asyncio.wait_for(asyncio.open_connection(DOUYU_HOST, DOUYU_PORT),timeout)
             msg = douyu_datastructure.serialize({'type': 'loginreq', 'roomid':self.roomid})
             self.writer.write(douyu_packet.to_raw(msg))
-            await self.writer.drain()
+            await asyncio.wait_for(self.writer.drain(), timeout)
             msg = douyu_datastructure.serialize({'type': 'joingroup', 'rid':self.roomid, 'gid':-9999})
             self.writer.write(douyu_packet.to_raw(msg))
-            await self.writer.drain()
+            await asyncio.wait_for(self.writer.drain(), timeout)
 
     async def mainloop(self):
         remains = None
         while True:
             try:
                 with await self.io_lock:
-                    content,remains = douyu_packet.from_raw(await self.reader.read(BUF_SIZE), remains)
+                    content,remains = douyu_packet.from_raw(await asyncio.wait_for(self.reader.read(BUF_SIZE),timeout), remains)
                 for item in content:
                     self.message_in_past_duration = True
                     try:
