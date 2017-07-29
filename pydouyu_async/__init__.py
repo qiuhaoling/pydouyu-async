@@ -69,10 +69,11 @@ class DouyuClient():
                 with await self.io_lock:
                     content,remains = douyu_packet.from_raw(await self.reader.read(BUF_SIZE), remains)
                 for item in content:
-                    with await self.message_in_past_duration_lock:
-                        self.message_in_past_duration += 1
                     try:
                         msg = douyu_datastructure.deserialize(item.decode('utf-8'))
+                        if msg.get('type', None) == 'chatmsg':
+                            with await self.message_in_past_duration_lock:
+                                self.message_in_past_duration += 1
                         await self.on_message_event_handler(msg)
                     except Exception as inst:
                         if self.inner_loop_exception_event_handler is not None:
