@@ -3,11 +3,11 @@ from struct import pack, unpack
 MESSAGE_TYPE_FROM_CLIENT = 689
 MESSAGE_TYPE_FROM_SERVER = 690
 
-def to_raw(body,encrypt=0,reserved=0):
+
+def to_raw(body, msg_type=MESSAGE_TYPE_FROM_CLIENT, encrypt=0, reserved=0):
     if isinstance(body,str):
         body = body.encode('utf-8')
     raw_length = len(body) + 9
-    msg_type = MESSAGE_TYPE_FROM_CLIENT
     return pack('<llhbb%ds' % (len(body) + 1), raw_length, raw_length, msg_type, encrypt, reserved, body + b'\0')
 
 def from_raw(buff,remains= None):
