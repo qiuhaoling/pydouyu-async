@@ -86,6 +86,8 @@ class DouyuClient():
             except asyncio.CancelledError:
                 pass
             except Exception as inst:
+                if str(inst) == "read() called while another coroutine is already waiting for incoming data":
+                    continue
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
 
