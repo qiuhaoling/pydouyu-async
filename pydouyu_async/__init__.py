@@ -73,9 +73,9 @@ class DouyuClient():
         remains = None
         while True:
             try:
+                if self.reader.at_eof():
+                    await self.handshake()
                 with await self.io_lock:
-                    if self.reader.at_eof():
-                        await self.handshake()
                     self.reader_future = asyncio.ensure_future(self.reader.read(BUF_SIZE))
                 content, remains = douyu_packet.from_raw(await self.reader_future, remains)
                 for item in content:
