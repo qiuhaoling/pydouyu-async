@@ -20,6 +20,7 @@ class DouyuClient():
         self.message_in_past_duration = 1
         self.reader_future = None
         self.writer_future = None
+        self.io_lock = asyncio.Lock()
         loop.run_until_complete(self.handshake())
         asyncio.ensure_future(self.main())
 
@@ -30,9 +31,10 @@ class DouyuClient():
                 if self.message_in_past_duration < 1:
                     raise Exception("[{}]No message received in the past {} seconds, reconnecting...".format(self.roomid,duration))
                 msg = douyu_datastructure.serialize({'type': 'keepalive', 'tick':int(time.time())})
-                self.writer.write(douyu_packet.to_raw(msg))
-                self.writer_future = asyncio.ensure_future(self.writer.drain())
-                await self.writer_future
+                with await self.io_lock:
+                    self.writer.write(douyu_packet.to_raw(msg))
+                    self.writer_future = asyncio.ensure_future(self.writer.drain())
+                    await self.writer_future
                 self.message_in_past_duration = 0
                 await asyncio.sleep(duration)
             except Exception as inst:
@@ -42,37 +44,39 @@ class DouyuClient():
 
     async def handshake(self):
         self.message_in_past_duration = 1
-        try:
-            self.reader_future.cancel()
-        except:
-            pass
-        try:
-            self.writer_future.cancel()
-        except:
-            pass
-        try:
-            self.writer.close()
-        except:
-            pass
-        self.reader, self.writer = await asyncio.open_connection(DOUYU_HOST, DOUYU_PORT)
-        msg = douyu_datastructure.serialize({'type': 'loginreq', 'roomid': self.roomid})
-        self.writer.write(douyu_packet.to_raw(msg))
-        self.writer_future = asyncio.ensure_future(self.writer.drain())
-        await self.writer_future
-        self.reader_future = asyncio.ensure_future(self.reader.read(BUF_SIZE))
-        content, remains = douyu_packet.from_raw(await self.reader_future, None)
-        msg = douyu_datastructure.serialize({'type': 'joingroup', 'rid': self.roomid, 'gid': -9999})
-        self.writer.write(douyu_packet.to_raw(msg))
-        self.writer_future = asyncio.ensure_future(self.writer.drain())
-        await self.writer_future
+        with await self.io_lock:
+            try:
+                self.reader_future.cancel()
+            except:
+                pass
+            try:
+                self.writer_future.cancel()
+            except:
+                pass
+            try:
+                self.writer.close()
+            except:
+                pass
+            self.reader, self.writer = await asyncio.open_connection(DOUYU_HOST, DOUYU_PORT)
+            msg = douyu_datastructure.serialize({'type': 'loginreq', 'roomid': self.roomid})
+            self.writer.write(douyu_packet.to_raw(msg))
+            self.writer_future = asyncio.ensure_future(self.writer.drain())
+            await self.writer_future
+            self.reader_future = asyncio.ensure_future(self.reader.read(BUF_SIZE))
+            content, remains = douyu_packet.from_raw(await self.reader_future, None)
+            msg = douyu_datastructure.serialize({'type': 'joingroup', 'rid': self.roomid, 'gid': -9999})
+            self.writer.write(douyu_packet.to_raw(msg))
+            self.writer_future = asyncio.ensure_future(self.writer.drain())
+            await self.writer_future
 
     async def mainloop(self):
         remains = None
         while True:
             try:
-                if self.reader.at_eof():
-                    await self.handshake()
-                self.reader_future = asyncio.ensure_future(self.reader.read(BUF_SIZE))
+                with await self.io_lock:
+                    if self.reader.at_eof():
+                        await self.handshake()
+                    self.reader_future = asyncio.ensure_future(self.reader.read(BUF_SIZE))
                 content, remains = douyu_packet.from_raw(await self.reader_future, remains)
                 for item in content:
                     try:
@@ -86,8 +90,6 @@ class DouyuClient():
             except asyncio.CancelledError:
                 pass
             except Exception as inst:
-                if str(inst) == "read() called while another coroutine is already waiting for incoming data":
-                    continue
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
 
