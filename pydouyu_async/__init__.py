@@ -77,7 +77,7 @@ class DouyuClient():
                     await self.handshake()
                 with await self.io_lock:
                     self.reader_future = asyncio.ensure_future(self.reader.read(BUF_SIZE))
-                content, remains = douyu_packet.from_raw(await self.reader_future, remains)
+                    content, remains = douyu_packet.from_raw(await self.reader_future, remains)
                 for item in content:
                     try:
                         msg = douyu_datastructure.deserialize(item.decode('utf-8'))
