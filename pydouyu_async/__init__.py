@@ -37,6 +37,8 @@ class DouyuClient():
                     await self.writer_future
                 self.message_in_past_duration = 0
                 await asyncio.sleep(duration)
+            except asyncio.CancelledError:
+                await asyncio.sleep(0)
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
@@ -87,6 +89,8 @@ class DouyuClient():
                     except Exception as inst:
                         if self.inner_loop_exception_event_handler is not None:
                             await self.inner_loop_exception_event_handler(inst)
+            except asyncio.CancelledError:
+                await asyncio.sleep(0)
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
