@@ -108,5 +108,6 @@ class DouyuClient():
         self.mainloop_future = asyncio.ensure_future(self.mainloop())
         self.heartbeat_future = asyncio.ensure_future(self.heartbeat())
 
+
 def DouyuFactorty(roomid,on_message_event_handler,inner_loop_exception_event_handler=None,outter_loop_exception_event_handler=None):
     DouyuClient(roomid, on_message_event_handler,inner_loop_exception_event_handler,outter_loop_exception_event_handler)
