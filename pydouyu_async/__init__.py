@@ -69,7 +69,6 @@ class DouyuClient():
                 msg = douyu_datastructure.serialize({'type': 'loginreq', 'roomid': self.roomid})
                 self.writer.write(douyu_packet.to_raw(msg))
                 await self.writer.drain()
-                content, remains = douyu_packet.from_raw(await self.reader.read(BUF_SIZE), None)
                 msg = douyu_datastructure.serialize({'type': 'joingroup', 'rid': self.roomid, 'gid': -9999})
                 self.writer.write(douyu_packet.to_raw(msg))
                 await self.writer.drain()
