@@ -14,14 +14,13 @@ class DouyuClient():
         self.on_message_event_handler = on_message_event_handler
         self.inner_loop_exception_event_handler = inner_loop_exception_event_handler
         self.outter_loop_exception_event_handler = outter_loop_exception_event_handler
-        loop = asyncio.get_event_loop()
         self.message_in_past_duration = 1
         self.heartbeat_future = None
         self.mainloop_future = None
         self.reader = None
         self.writer = None
         self.handshake_lock = asyncio.Lock()
-        loop.run_until_complete(self.handshake())
+        asyncio.ensure_future(self.handshake())
 
 
     async def heartbeat(self,duration=30):
@@ -107,7 +106,3 @@ class DouyuClient():
     async def main(self):
         self.mainloop_future = asyncio.ensure_future(self.mainloop())
         self.heartbeat_future = asyncio.ensure_future(self.heartbeat())
-
-
-def DouyuFactorty(roomid,on_message_event_handler,inner_loop_exception_event_handler=None,outter_loop_exception_event_handler=None):
-    DouyuClient(roomid, on_message_event_handler,inner_loop_exception_event_handler,outter_loop_exception_event_handler)
