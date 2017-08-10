@@ -42,8 +42,7 @@ class DouyuClient():
                     asyncio.ensure_future(self.handshake())
                 await asyncio.sleep(0)
 
-    async def handshake(self):
-        self.message_in_past_duration = 1
+    async def cancel(self):
         with await self.handshake_lock:
             try:
                 if self.heartbeat_future is not None:
@@ -63,6 +62,11 @@ class DouyuClient():
             except Exception as inst:
                 if self.outter_loop_exception_event_handler is not None:
                     await self.outter_loop_exception_event_handler(inst)
+
+    async def handshake(self):
+        self.message_in_past_duration = 1
+        await self.cancel()
+        with await self.handshake_lock:
             try:
                 self.reader, self.writer = await asyncio.open_connection(DOUYU_HOST, DOUYU_PORT)
                 msg = douyu_datastructure.serialize({'type': 'loginreq', 'roomid': self.roomid})
