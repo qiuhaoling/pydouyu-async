@@ -27,7 +27,8 @@ class DouyuClient():
         while True:
             try:
                 if self.message_in_past_duration < 1:
-                    raise Exception("[{}]No message received in the past {} seconds, reconnecting...".format(self.roomid,duration))
+                    raise ConnectionError(
+                        "[{}]No message received in the past {} seconds, reconnecting...".format(self.roomid, duration))
                 msg = douyu_datastructure.serialize({'type': 'keepalive', 'tick':int(time.time())})
                 self.writer.write(douyu_packet.to_raw(msg))
                 await self.writer.drain()
